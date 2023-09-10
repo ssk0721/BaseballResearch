@@ -1,0 +1,246 @@
+---
+title: "Variables Associated With wRC+ for Qualified Hitters from 2017-2019"
+author: "Sam Kim"
+date: "3/10/2023"
+header-includes: 
+      - \usepackage{amsmath}
+output: 
+    pdf_document    
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, out.width='50%')
+#out.width sets size of graphs
+library(ggplot2)
+library(dplyr)
+library(lme4)
+library(HLMdiag)
+```
+
+```{r}
+#read in the data
+hitting1719 <- read.csv("data.csv")
+```
+
+# EDA
+```{r}
+#distribution of wRC+
+summary(hitting1719$wRC_plus)
+sd(hitting1719$wRC_plus)
+hist(hitting1719$wRC_plus)
+
+#wRC+ by age
+table(hitting1719$Age)
+ggplot(hitting1719, aes(x = Age, y = wRC_plus)) + geom_boxplot()
+
+#wRC+ by outside zone swing percentage
+summary(hitting1719$O.Swing_pct)
+sd(hitting1719$O.Swing_pct)
+ggplot(hitting1719, aes(x = `O.Swing_pct`, y = wRC_plus)) + geom_point()
+
+#wRC+ by inside zone swing percentage
+summary(hitting1719$Z.Swing_pct)
+sd(hitting1719$Z.Swing_pct)
+ggplot(hitting1719, aes(x = `Z.Swing_pct`, y = wRC_plus)) + geom_point()
+
+#wRC+ by clutch
+summary(hitting1719$Clutch)
+sd(hitting1719$Clutch)
+ggplot(hitting1719, aes(x = Clutch, y = wRC_plus)) + geom_point()
+
+#wRC+ by pull percentage
+summary(hitting1719$Pull_pct)
+sd(hitting1719$Pull_pct)
+ggplot(hitting1719, aes(x = Pull_pct, y = wRC_plus)) + geom_point()
+
+#wRC+ by position
+table(hitting1719$POS)
+ggplot(hitting1719, aes(x = POS, y = wRC_plus)) + geom_boxplot()
+
+#wRC+ by bats
+table(hitting1719$bats)
+ggplot(hitting1719, aes(x = bats, y = wRC_plus)) + geom_boxplot()
+
+#checking interactions
+p <- ggplot(hitting1719, aes(x = wRC_plus))
+p + geom_histogram(fill="blue", color="white")
+
+p2 <- ggplot(hitting1719, aes(x=Pull_pct, y = wRC_plus))
+p2 + geom_point() +
+geom_smooth(method = "loess", se = FALSE)
+
+p3 <- ggplot(hitting1719, aes(x=Pull_pct, y = wRC_plus)) 
+p3 + geom_point() +
+geom_smooth(method = "lm", se = FALSE) +
+facet_wrap(~POS) 
+
+p4 <- ggplot(hitting1719, aes(x=Clutch, y = wRC_plus)) 
+p4 + geom_point() +
+geom_smooth(method = "lm", se = FALSE) +
+facet_wrap(~POS) 
+
+p5 <- ggplot(hitting1719, aes(x=`Z.Swing_pct`, y = wRC_plus)) 
+p5 + geom_point() +
+geom_smooth(method = "lm", se = FALSE) +
+facet_wrap(~POS) 
+
+p6 <- ggplot(hitting1719, aes(x=`O.Swing_pct`, y = wRC_plus)) 
+p6 + geom_point() +
+geom_smooth(method = "lm", se = FALSE) +
+facet_wrap(~POS) 
+
+p8 <- ggplot(hitting1719, aes(x=Pull_pct, y = wRC_plus)) 
+p8 + geom_point() +
+geom_smooth(method = "lm", se = FALSE) +
+facet_wrap(~bats) 
+
+p9 <- ggplot(hitting1719, aes(x=Clutch, y = wRC_plus)) 
+p9 + geom_point() +
+geom_smooth(method = "lm", se = FALSE) +
+facet_wrap(~POS) 
+
+p10 <- ggplot(hitting1719, aes(x=`Z.Swing_pct`, y = wRC_plus)) 
+p10 + geom_point() +
+geom_smooth(method = "lm", se = FALSE) +
+facet_wrap(~POS) 
+
+p11 <- ggplot(hitting1719, aes(x=`O.Swing_pct`, y = wRC_plus)) 
+p11 + geom_point() +
+geom_smooth(method = "lm", se = FALSE) +
+facet_wrap(~POS)
+
+p13 <- ggplot(hitting1719, aes(x=Clutch, y = wRC_plus)) 
+p13 + geom_point() +
+geom_smooth(method = "lm", se = FALSE) +
+facet_wrap(~Age) 
+
+p14 <- ggplot(hitting1719, aes(x=`Z.Swing_pct`, y = wRC_plus)) 
+p14 + geom_point() +
+geom_smooth(method = "lm", se = FALSE) +
+facet_wrap(~Age) 
+
+p15 <- ggplot(hitting1719, aes(x=`O.Swing_pct`, y = wRC_plus)) 
+p15 + geom_point() +
+geom_smooth(method = "lm", se = FALSE) +
+facet_wrap(~Age) 
+
+p16 <- ggplot(hitting1719, aes(x=Pull_pct, y = wRC_plus)) 
+p16 + geom_point() +
+geom_smooth(method = "lm", se = FALSE) +
+facet_wrap(~Age) 
+
+p17 <- ggplot(hitting1719, aes(x=Clutch, y = wRC_plus)) 
+p17 + geom_point() +
+geom_smooth(method = "lm", se = FALSE) +
+facet_wrap(~Age) 
+
+p18 <- ggplot(hitting1719, aes(x=`Z.Swing_pct`, y = wRC_plus)) 
+p18 + geom_point() +
+geom_smooth(method = "lm", se = FALSE) +
+facet_wrap(~Age) 
+
+p19 <- ggplot(hitting1719, aes(x=`O.Swing_pct`, y = wRC_plus)) 
+p19 + geom_point() +
+geom_smooth(method = "lm", se = FALSE) +
+facet_wrap(~Age)
+
+```
+
+
+
+# Modeling
+
+```{r}
+#unconditional means
+hitting1719.lmer <- lmer(wRC_plus ~ 1 + (1|playerid), data = hitting1719)
+summary(hitting1719.lmer)
+
+361.9 / (361.9 + 287.5)
+287.5 / (361.9 + 287.5)
+```
+
+```{r}
+#unconditional growth
+hitting1719.lmer2 <- lmer(wRC_plus ~ Season + (Season|playerid), data = hitting1719)
+summary(hitting1719.lmer2)
+```
+
+```{r}
+#checking for random intercept
+hitting1719.lmer3 <- lmer(wRC_plus ~ Season + (1|playerid), data = hitting1719)
+summary(hitting1719.lmer3)
+
+hitting1719.lm <- lm(wRC_plus ~ Season, data = hitting1719)
+summary(hitting1719.lm)
+
+L1 <-logLik(hitting1719.lmer3, REML = TRUE)
+L0 <-logLik(hitting1719.lm, REML = TRUE)
+
+D <- 2*(L1 - L0)
+D
+(1/2)*(1-pchisq(D,1)) #full model preferred
+
+#checking for random slope
+L1 <-logLik(hitting1719.lmer2)
+L0 <-logLik(hitting1719.lmer3)
+
+D <- 2*(L1 - L0)
+D
+(1/2)*(1-pchisq(D,2)) + (1/2)*(1-pchisq(D,1)) #reduced model preferred
+```
+
+
+```{r}
+#modeling fixed effects
+hitting1719.lmer4 <- lmer(wRC_plus ~ Clutch + Season + `O.Swing_pct` + Age * Pull_pct + POS * ( `Z.Swing_pct` + Pull_pct + bats) + bats * Pull_pct + (1|playerid), data = hitting1719)
+summary(hitting1719.lmer4)
+
+#removing interactions
+hitting1719.lmer5 <- lmer(wRC_plus ~ Age + Pull_pct + Clutch + Season + `O.Swing_pct` + bats + POS + `Z.Swing_pct` + (1|playerid), data = hitting1719)
+summary(hitting1719.lmer5)
+
+anova(hitting1719.lmer5, hitting1719.lmer4) #reduced model preferred
+
+#removing position, clutch, and pull percentage
+hitting1719.lmer6 <- lmer(wRC_plus ~ Age + Season + `O.Swing_pct` + bats + `Z.Swing_pct` + (1|playerid), data = hitting1719)
+summary(hitting1719.lmer6)
+
+anova(hitting1719.lmer6, hitting1719.lmer5) #reduced model preferred
+
+#removing age
+hitting1719.lmer7 <- lmer(wRC_plus ~Season + `O.Swing_pct` + bats + `Z.Swing_pct` + (1|playerid), data = hitting1719)
+summary(hitting1719.lmer7)
+
+anova(hitting1719.lmer7, hitting1719.lmer6) #reduced model preferred
+
+confint(hitting1719.lmer7) #confidence interval
+
+```
+
+```{r}
+#Diagnostics
+out <- hlm_resid(hitting1719.lmer7, standardize = TRUE, include.ls = FALSE)
+
+#standardized resids against marginal means
+ggplot(out, aes(x = .mar.fitted, y = .chol.mar.resid)) + geom_point() +
+         geom_hline(yintercept = 0, color = "gray")
+
+ggplot(out, aes(x = .fitted, y = .std.resid)) + geom_point() +
+  geom_hline(yintercept = 0, color = "gray") +
+  labs(x = "conditional means", y = "cond. residuals")
+
+
+#cooks distance
+cd <- cooks.distance(hitting1719.lmer7)
+dotplot_diag(cd, name="cooks.distance", cutoff="internal")
+
+
+#removing influential points
+hitting1719.lmer8 <- lmer(wRC_plus ~Season + `O.Swing_pct` + bats + `Z.Swing_pct` + (1|playerid), data = hitting1719, subset = -c(164, 6))
+summary(hitting1719.lmer8) #keep these observations in
+
+```
+
